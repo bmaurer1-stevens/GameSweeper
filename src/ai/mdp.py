@@ -19,8 +19,6 @@ class MDP:
         actions = []
         for c in board.get_unrevealed_cells():
             actions.append(("reveal", c.x, c.y))
-            # Flagging is another option, but may not give immediate reward
-            # It might help reduce uncertainty though.
             actions.append(("flag", c.x, c.y))
         return actions
 
@@ -35,17 +33,14 @@ class MDP:
         return new_board
 
     def action_reward(self, board, action):
-        # For reveal:
-        # Reward = expected value: (1 - p_mine)*1 + p_mine*(-10)
-        # For flag:
-        # Reward = small neutral (0) since it's strategic not immediate.
+        # For reveal: Reward = expected value: (1 - p_mine)*1 + p_mine*(-10)
+        # For flag: Reward = small neutral (0) since it's strategic not immediate.
         act_type, x, y = action
         p_mine = self.probabilities.get((x, y), 0.5)
         if act_type == "reveal":
             return (1 - p_mine)*1 + p_mine*(-10)
         elif act_type == "flag":
-            # Flagging does not immediately yield success, but prevents revealing a mine by mistake later.
-            # We give a small neutral reward.
+            # Flagging does not immediately yield success, but prevents revealing a mine by mistake later --> Give a small neutral reward.
             return 0.0
 
     def expectimax(self, board, depth):
@@ -74,7 +69,7 @@ class MDP:
                 # "reveal" is stochastic from the perspective of hitting a mine or not, but it is already included the expected reward in action_reward.
                 # Since action_reward is already an expectation, it can be treated as deterministic here.
                 new_board = self.simulate_action(board, action)
-                # If we hit a mine, game_over will be True, but we've accounted for that in the reward.
+                # If a mine is hit, game_over will be True --> accounted for this the reward.
                 value, _ = self.expectimax(new_board, depth-1)
                 total_value = self.action_reward(board, action) + value
                 if total_value > best_value:
