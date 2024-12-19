@@ -1,6 +1,3 @@
-import math
-from pulp import LpProblem, LpVariable, LpMinimize, lpSum, LpStatus, LpContinuous
-
 class BayesianAnalyzer:
     def __init__(self):
         pass
@@ -10,63 +7,41 @@ class BayesianAnalyzer:
         if not unrevealed_cells:
             return {}
 
+        # Collect constraints from each revealed cell with a clue
         constraints = []
-        revealed_clue_cells = []
+        cell_probs = {(c.x, c.y): [] for c in unrevealed_cells}
+
         for y in range(board.height):
             for x in range(board.width):
                 cell = board.grid[y][x]
                 if cell.revealed and not cell.has_mine:
+                    # Clue given by this cell
                     clue = cell.neighbor_mines
-                    unrevealed_neighbors = [c for c in board.get_neighbors(x, y) 
-                                            if not c.revealed and not c.flagged]
-                    if unrevealed_neighbors:
-                        constraints.append((unrevealed_neighbors, clue))
-                        revealed_clue_cells.append(cell)
+                    neighbors = board.get_neighbors(x, y)
+                    unrevealed_unflagged = [n for n in neighbors if not n.revealed and not n.flagged]
 
-        if not constraints:
-            # No constraints, fallback to uniform probability
-            total_mines = board.mines
-            flagged_mines = sum(1 for row in board.grid for c in row if c.flagged)
-            remaining_mines = total_mines - flagged_mines
-            remaining_cells = len(unrevealed_cells)
-            base_prob = remaining_mines / remaining_cells if remaining_cells > 0 else 0.0
-            return {(c.x, c.y): base_prob for c in unrevealed_cells}
+                    if unrevealed_unflagged:
+                        k = len(unrevealed_unflagged)
+                        # Base probability per neighbor = clue/k
+                        # We will adjust this probability based on how often a cell appears in other constraints.
+                        for n in unrevealed_unflagged:
+                            cell_probs[(n.x, n.y)].append(clue/k)
 
-        total_mines = board.mines
-        flagged_mines = sum(c.flagged for row in board.grid for c in row)
-        remaining_mines = total_mines - flagged_mines
+        # Combine probabilities for each cell (likelihood density)
+        final_prob = {}
+        for coord, p_list in cell_probs.items():
+            if p_list:
+                # Average them or use a different combination strategy
+                # e.g., weighted average. For simplicity, take mean.
+                mean_p = sum(p_list) / len(p_list)
+                final_prob[coord] = max(0.0, min(1.0, mean_p))
+            else:
+                # No clues mentioning this cell — fallback to global ratio
+                total_mines = board.mines
+                flagged = sum(1 for row in board.grid for c in row if c.flagged)
+                remaining_mines = total_mines - flagged
+                remaining_cells = len(unrevealed_cells)
+                fallback_p = remaining_mines / remaining_cells if remaining_cells > 0 else 0
+                final_prob[coord] = fallback_p
 
-        cell_to_idx = {(c.x, c.y): i for i, c in enumerate(unrevealed_cells)}
-        idx_to_cell = {i: c for i, c in enumerate(unrevealed_cells)}
-
-        # Setup LP problem
-        # We'll allow fractional solutions to get probabilities as a relaxation
-        prob = LpProblem("Minesweeper_Prob", LpMinimize)
-
-        vars = [LpVariable(f"cell_{i}", lowBound=0, upBound=1, cat=LpContinuous) 
-                for i in range(len(unrevealed_cells))]
-
-        # Each constraint: sum of variables for that constraint = clue
-        for (neighbors, clue) in constraints:
-            prob += lpSum([vars[cell_to_idx[(n.x, n.y)]] for n in neighbors]) == clue
-
-        # Global constraint: sum of all variables = remaining_mines
-        prob += lpSum(vars) == remaining_mines
-
-        # Objective: Minimize sum of vars (arbitrary - we just need a feasible solution)
-        prob.setObjective(lpSum([0*var for var in vars]))
-
-        status = prob.solve()
-
-        if LpStatus[status] != "Optimal":
-            # Infeasible or no solution, fallback to uniform
-            base_prob = remaining_mines / len(unrevealed_cells) if unrevealed_cells else 0
-            return {(c.x, c.y): base_prob for c in unrevealed_cells}
-
-        # If optimal, use the fractional values as probabilities
-        probabilities = {}
-        for i, c in idx_to_cell.items():
-            p = vars[i].varValue
-            probabilities[(c.x, c.y)] = p
-
-        return probabilities
+        return final_prob
