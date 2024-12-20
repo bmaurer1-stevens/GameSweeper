@@ -46,16 +46,47 @@ def run_ai_game(width=9, height=9, mines=10, max_steps=200):
                 break
             act_type, x, y = action
             gm.make_move(x, y, act_type)
-
         step += 1
 
     return gm.is_victory()
 
 if __name__ == "__main__":
-    print("Start games")
     num_games = 20
-    classic_wins = sum(run_classic_game() for _ in range(num_games))
-    ai_wins = sum(run_ai_game() for _ in range(num_games))
+    print("Starting simulation...")
+    print(f"Running {num_games} classic approach games and {num_games} AI approach games.")
 
+    classic_wins = 0
+    ai_wins = 0
+
+    # Run classic games
+    for i in range(num_games):
+        print(f"Running classic game {i+1}/{num_games}...", end='')
+        result = run_classic_game()
+        if result:
+            classic_wins += 1
+            print(" Won")
+        else:
+            print(" Lost")
+        
+        # Print intermediate results
+        if (i+1) % 5 == 0:
+            print(f"Classic approach intermediate results: {classic_wins}/{i+1} = {(classic_wins/(i+1))*100:.2f}%")
+
+    # Run AI games
+    for i in range(num_games):
+        print(f"Running AI game {i+1}/{num_games}...", end='')
+        result = run_ai_game()
+        if result:
+            ai_wins += 1
+            print(" Won")
+        else:
+            print(" Lost")
+        
+        # Print intermediate results
+        if (i+1) % 5 == 0:
+            print(f"AI approach intermediate results: {ai_wins}/{i+1} = {(ai_wins/(i+1))*100:.2f}%")
+
+    # Final results
+    print("All simulations completed.")
     print(f"Classic Approach Win Rate: {classic_wins}/{num_games} = {(classic_wins/num_games)*100:.2f}%")
     print(f"AI Approach Win Rate: {ai_wins}/{num_games} = {(ai_wins/num_games)*100:.2f}%")
