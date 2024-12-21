@@ -1,66 +1,92 @@
 # run_simulation.py
+
 import random
 from src.game.board import Board
 from src.game.game_manager import GameManager
 from src.ai.bayesian import BayesianAnalyzer
 from src.ai.mdp import MDP
 from src.ai.pattern_solver import PatternSolver
+from src.ai.learning_manager import LearningManager
 from src.metrics.dynamic_gr import DynamicGR
 
-def run_ai_game(width=5, height=5, mines=5, max_steps=50):
+def board_state_hash(board):
+    """
+    Simple state hash: frozensets of flagged and revealed.
+    """
+    flagged_positions = []
+    revealed_positions = []
+    for y in range(board.height):
+        for x in range(board.width):
+            c = board.grid[y][x]
+            if c.flagged:
+                flagged_positions.append((x, y))
+            if c.revealed:
+                revealed_positions.append((x, y))
+    return (frozenset(flagged_positions), frozenset(revealed_positions))
+
+def run_ai_game(width=5, height=5, mines=5, max_steps=50, learning_mgr=None, game_key="5x5_5mines"):
+    """
+    AI approach with partial 'learning' from previous runs.
+    """
     board = Board(width, height, mines)
     gm = GameManager(board)
     bayes = BayesianAnalyzer()
     gr = DynamicGR()
     pattern_solver = PatternSolver()
 
-    # optional first reveal
-    gm.make_move(width//2, height//2, "reveal")
+    gm.make_move(width//2, height//2, "reveal")  # optional first reveal in center
+
     step = 0
-    last_forced_move_count = -1
+    step_records = []  # to store (state_hash, action) for each step
 
     while not gm.is_over() and step < max_steps:
-        # 1. Pattern-based forced moves
-        forced_moves = pattern_solver.find_forced_moves(board)
-        if forced_moves:
-            # If we keep generating forced moves but remain stuck, break
-            if last_forced_move_count == len(forced_moves):
-                # Possibly guess a low-prob cell to break the loop
-                guess = guess_safest_cell(board, bayes)
-                if guess:
-                    gm.make_move(guess[0], guess[1], "reveal")
-                else:
-                    break
-            else:
-                last_forced_move_count = len(forced_moves)
+        # Build a state hash for learning
+        st_hash = board_state_hash(board)
 
-            for move in forced_moves:
-                act_type, x, y = move
-                gm.make_move(x, y, act_type)
-                if gm.is_over():
-                    break
+        # 1. Check if we have a 'best action' from previous experience
+        best_act_from_history = None
+        if learning_mgr:
+            best_act_from_history = learning_mgr.best_action_for_state(game_key, st_hash)
+
+        if best_act_from_history:
+            # If we have a historically good action, do that
+            act_type, x, y = best_act_from_history
+            gm.make_move(x, y, act_type)
+            step_records.append((st_hash, best_act_from_history))
         else:
-            # 2. Bayesian probability & MDP
-            probs = bayes.compute_probabilities(board)
-            mdp = MDP(board, probs, depth=3)
-            action = mdp.find_best_action()
-
-            if action is None:
-                # 3. fallback guess if MDP can't find a better move
-                guess = guess_safest_cell(board, bayes)
-                if guess is not None:
-                    gm.make_move(guess[0], guess[1], "reveal")
-                else:
-                    break
+            # No historical data => proceed with pattern / MDP approach
+            forced_moves = pattern_solver.find_forced_moves(board)
+            if forced_moves:
+                # Just pick the first forced move for simplicity
+                fm = forced_moves[0]
+                gm.make_move(fm[1], fm[2], fm[0])
+                step_records.append((st_hash, fm))
             else:
-                gm.make_move(action[1], action[2], action[0])
+                probs = bayes.compute_probabilities(board)
+                mdp = MDP(board, probs, depth=3)
+                action = mdp.find_best_action()
+                if action is None:
+                    # fallback: random reveal or guess the safest cell
+                    action = guess_safest_cell(board, bayes)
+                    if not action:
+                        break
+                    act_type, x, y = action
+                    gm.make_move(x, y, act_type)
+                    step_records.append((st_hash, action))
+                else:
+                    gm.make_move(action[1], action[2], action[0])
+                    step_records.append((st_hash, action))
 
         step += 1
+
+    # Record outcome for learning
+    outcome = "win" if gm.is_victory() else "lose"
+    if learning_mgr:
+        learning_mgr.record_game(game_key, step_records, outcome)
 
     return gm.is_victory()
 
 def guess_safest_cell(board, bayes):
-    # pick the cell with the lowest probability of being a mine
     unrevealed = board.get_unrevealed_cells()
     if not unrevealed:
         return None
@@ -72,10 +98,10 @@ def guess_safest_cell(board, bayes):
         if p < best_prob:
             best_prob = p
             best_cell = (c.x, c.y)
-    return best_cell
+    # Return an action in the same format: ("reveal", x, y)
+    return ("reveal", best_cell[0], best_cell[1])
 
 def run_classic_game(width=5, height=5, mines=5, max_steps=50):
-    # random approach for baseline
     board = Board(width, height, mines)
     gm = GameManager(board)
     step = 0
@@ -89,29 +115,32 @@ def run_classic_game(width=5, height=5, mines=5, max_steps=50):
     return gm.is_victory()
 
 if __name__ == "__main__":
-    num_games = 10
-    print("Starting advanced AI approach vs. classic on a 5x5 board with 5 mines...")
+    from src.ai.learning_manager import LearningManager
 
-    ai_wins = 0
+    num_games = 20
+    learning_mgr = LearningManager("experience_data.json")
+    game_key = "5x5_5mines"
+
     classic_wins = 0
-    for i in range(num_games):
-        print(f"\n=== Classic Game {i+1} ===")
+    ai_wins = 0
+
+    print("Starting simulation with Learning Manager...")
+
+    # Run some classic games for baseline
+    for i in range(num_games // 2):
         res = run_classic_game()
         if res:
             classic_wins += 1
-            print("Classic: Win")
-        else:
-            print("Classic: Lose")
 
-    for i in range(num_games):
-        print(f"\n=== AI Game {i+1} ===")
-        res = run_ai_game()
+    # Run some AI games that store data and (re)use experience_data.json
+    for i in range(num_games // 2):
+        res = run_ai_game(5, 5, 5, 50, learning_mgr, game_key)
         if res:
             ai_wins += 1
-            print("AI: Win")
-        else:
-            print("AI: Lose")
 
-    print("\nResults:")
-    print(f"Classic Wins: {classic_wins}/{num_games} = {(classic_wins/num_games)*100:.2f}%")
-    print(f"AI Wins: {ai_wins}/{num_games} = {(ai_wins/num_games)*100:.2f}%")
+    print(f"Classic Approach Wins: {classic_wins}/{num_games//2}")
+    print(f"AI Approach Wins: {ai_wins}/{num_games//2}")
+
+    # Save experiences to file for future runs
+    learning_mgr.save_experience()
+    print("Experience data saved.")
