@@ -1,8 +1,18 @@
-# GameSweeper: Enhancing Game Analysis with Game Theory Algorithms and Dynamic Refinement Metrics: A Case Study on Minesweeper
+# **GameSweeper AI: Enhancing Game Analysis with Game Theory Algorithms and Dynamic Refinement Metrics**
 
-This project aims to improve Minesweeper AI performance and analysis by integrating advanced game theory techniques, dynamic game refinement (GR) metrics, and probabilistic reasoning. The work extends beyond conventional heuristics to include Bayesian inference for probability estimation, Markov Decision Processes (MDPs) for sequential decision-making, and dynamic GR metrics to analyze player engagement and complexity over time.
+## 🚀 **Project Overview**
 
-## Table of Contents
+GameSweeper AI is an advanced Minesweeper agent leveraging **Game Theory**, **Dynamic Game Refinement (GR) Metrics**, and **Reinforcement Learning** to optimize decision-making and improve performance over time. By integrating **Bayesian Inference**, **Markov Decision Processes (MDPs)**, and **Entropy Analysis**, the project provides a robust framework for strategic gameplay and deeper insights into complexity trends.
+
+The project aims to:
+- Improve AI decision-making using **Bayesian Probability Models** and **MDPs**.
+- Analyze **Entropy**, **Complexity**, and **Dynamic Game Refinement (GR) Metrics**.
+- Compare AI performance against **Classic Human-like Heuristics**.
+- Enable continuous improvement through **Experience Data Storage**.
+
+---
+
+## 📚 **Table of Contents**
 
 1. [Introduction](#introduction)  
 2. [Project Structure](#project-structure)  
@@ -14,137 +24,156 @@ This project aims to improve Minesweeper AI performance and analysis by integrat
 4. [Running the Simulation](#running-the-simulation)  
 5. [Evaluating Results](#evaluating-results)  
 6. [Game Theory and GR Metrics Explained](#game-theory-and-gr-metrics-explained)  
-7. [Future Work](#future-work)  
+7. [Continuous AI Learning](#continuous-ai-learning)  
+8. [Future Work](#future-work)  
 
-## Introduction
+---
 
-Minesweeper is a classic puzzle that requires deducing the location of mines from numerical clues. While the rules are simple, the strategic depth and uncertainty make it an excellent model for testing game theory algorithms and analyzing player engagement.
+## 🧠 **Introduction**
 
-This project advances Minesweeper AI by:  
-- Using **Bayesian Inference** to calculate probabilities of cells being mines.  
-- Employing **MDPs** to choose actions that maximize long-term expected utility.  
-- Integrating **Dynamic Game Refinement (GR)** metrics to measure changes in complexity, uncertainty, and psychological engagement (acceleration, jerk) over the course of the game.
+Minesweeper is a classic puzzle requiring logical deduction and probabilistic reasoning. While simple in rules, the game's strategic depth and uncertainty make it an excellent testbed for **Game Theory** algorithms and **AI decision systems**.
 
-## Project Structure
+### **Core Objectives:**
+- Use **Bayesian Inference** for mine probability estimation.
+- Apply **Markov Decision Processes (MDPs)** for sequential, utility-driven decision-making.
+- Leverage **Dynamic GR Metrics** to monitor engagement, uncertainty, and decision-making tension.
+
+This project goes beyond traditional heuristic approaches by implementing adaptive AI techniques and robust data analysis.
+
+---
+
+## 📂 **Project Structure**
 
 ```
-project/
-│
-├─ src/
-│  ├─ game/
-│  │  ├─ board.py
-│  │  ├─ cell.py
-│  │  ├─ game_manager.py
-│  │  └─ __init__.py
-│  │
-│  ├─ ai/
-│  │  ├─ bayesian.py
-│  │  ├─ mdp.py
-│  │  ├─ pattern_solver.py
-│  │  └─ __init__.py
-│  │
-│  ├─ metrics/
-│  │  ├─ dynamic_gr.py
-│  │  └─ __init__.py
-│  │
-│  └─ utils/
-│     ├─ logger.py
-│     └─ __init__.py
-│
-└─ run_simulation.py
+GameSweeper/
+├── run_simulation.py     # Main simulation runner
+├── src/
+│   ├── game/
+│   │   ├── board.py      # Board representation and game logic
+│   │   ├── cell.py       # Cell properties and states
+│   │   ├── game_manager.py # High-level game operations
+│   ├── ai/
+│   │   ├── ai_agent.py   # Core AI logic
+│   │   ├── bayesian_model.py # Bayesian probability calculations
+│   │   ├── mdp_solver.py # MDP solver for strategic planning
+│   │   ├── pattern_solver.py # Pattern recognition for deterministic moves
+│   │   ├── learning_manager.py # AI experience storage and retrieval
+│   ├── metrics/
+│   │   ├── dynamic_gr.py # Dynamic Game Refinement calculations
+│   │   ├── metrics.py    # Entropy and complexity metrics
+│   ├── utils/
+│   │   ├── logger.py     # Logs game progress and metrics
+│   │   ├── visualizer.py # Console board printing
+├── experience_data.json  # AI learning history
+├── analysis.ipynb        # Post-simulation analysis notebook
+├── README.md             # Project documentation
 ```
 
-## Components Overview
+---
 
-### Game Logic (src/game)
+## 🛠️ **Components Overview**
 
-- **board.py**:  
-  Creates and manages the Minesweeper board, places mines, calculates neighbor mine counts, and handles revealing cells and checking victory conditions.
+### ✅ **Game Logic (`src/game`)**
+- **board.py**: Handles board creation, mine placement, and cell operations.
+- **cell.py**: Represents individual cell states (e.g., flagged, revealed).
+- **game_manager.py**: Coordinates moves, validates win/loss states, and manages overall game flow.
 
-- **cell.py**:  
-  Defines the `Cell` class, representing a single tile (mine, revealed, flagged).
+### ✅ **AI and Game Theory Models (`src/ai`)**
+- **ai_agent.py**: Core AI logic for decision-making.
+- **bayesian_model.py**: Calculates probabilities for each cell using Bayesian reasoning.
+- **mdp_solver.py**: Implements Markov Decision Processes for optimal sequential actions.
+- **pattern_solver.py**: Recognizes deterministic patterns to reduce randomness in moves.
+- **learning_manager.py**: Stores and retrieves AI learning experiences from `experience_data.json`.
 
-- **game_manager.py**:  
-  Provides a simple interface for making moves (reveal/flag), checking game state (win/lose), and advancing the game.
+### ✅ **Metrics and Logging (`src/metrics`)**
+- **dynamic_gr.py**: Computes dynamic GR metrics, including psychological metrics like acceleration and jerk.
+- **metrics.py**: Tracks entropy, complexity, and GR over time.
+- **logger.py**: Logs step-by-step actions and outcomes into `gr_metrics.csv`.
 
-### AI and Game Theory Models (src/ai)
+### ✅ **Utilities (`src/utils`)**
+- **visualizer.py**: Prints the board state after each move for easy debugging.
+- **logger.py**: Logs game states and metrics.
 
-- **bayesian.py**:  
-  Implements methods to estimate the probability of each unrevealed cell being a mine. It collects constraints from revealed clues and uses local heuristics or simplified constraint-based reasoning when global constraints are infeasible.
+---
 
-- **mdp.py**:  
-  Models Minesweeper as a sequential decision-making problem. Uses a depth-limited lookahead or heuristic approach to choose actions that maximize expected rewards. The MDP encapsulates uncertainty and future consequences of actions, aligning with game theory’s emphasis on strategic planning and optimal policies.
-
-- **pattern_solver.py**:  
-  Recognizes deterministic patterns and forced moves (like if a clue matches exactly the number of unrevealed neighbors) to minimize guesswork. Using pattern recognition reduces dependency on probabilistic inference and improves decision-making quality.
-
-### Metrics and Logging (src/metrics and src/utils)
-
-- **dynamic_gr.py**:  
-  Implements the Dynamic Game Refinement metric. Extends traditional GR theory by incorporating:
-  - Changing complexity over time.
-  - Uncertainty (entropy) from probabilistic reasoning.
-  - Psychological metrics: acceleration and jerk, derived from the rate of safe cell revelations over time.
-
-- **logger.py**:  
-  Logs GR metrics per step into a CSV file (`gr_metrics.csv`). This allows for post-game analysis of engagement and complexity trends.
-
-### Utilities (src/utils)
-
-- General utility functions and classes (e.g., for logging and data handling).
-
-## Running the Simulation
+## 🚦 **Running the Simulation**
 
 1. **Dependencies:**  
-   - Python 3.9+ (recommended)
-   - `pip install pulp` (if using linear/integer programming, optional in the improved version)
-   - Other standard libraries (no additional installations required for `copy`, `csv`, etc. as they are part of Python’s standard library).
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
+   ```
 
-2. **Run a Simulation:**  
+2. **Run Simulations:**  
    ```bash
    python run_simulation.py
    ```
-   This will run a series of Minesweeper games using the AI described above.
 
-3. **Outputs:**  
-   - Console output: Shows win/lose outcomes of each game.
-   - `gr_metrics.csv`: Logs dynamic GR values, complexity, entropy, and psychological metrics each step.
+3. **Outputs:**
+- Win/Loss Ratio
+- Entropy Trends
+- Complexity Analysis
+- Logs in `experience_data.json` and `gr_metrics.csv`
 
-## Evaluating Results
+4. **Visualize Board Progress:**  
+   Board state is printed after every AI action for better transparency.
 
-- **Win/Loss Ratio:**  
-  After running multiple games, review how often the AI wins. Increasing the number of simulations (e.g., 20+ games) provides statistically meaningful results.
+---
 
-- **Complexity and Entropy Trends:**  
-  Examine `gr_metrics.csv` to see if the entropy decreases over time as the AI gains information. Ideally, complexity should lower as safe cells are revealed, and entropy should reduce, reflecting improved certainty.
+## 📊 **Evaluating Results**
 
-- **GR Values:**  
-  Assess how GR evolves as the game progresses. Higher GR may indicate balanced complexity and engagement. Sudden changes in GR (and acceleration/jerk) highlight dynamic shifts in player (or AI) decision-making tension.
+### ✅ **1. Win/Loss Ratio**
+- Compares AI and Classic approaches.
+- Provides statistical insight into the AI's learning efficiency.
 
-## Game Theory and GR Metrics Explained
+### ✅ **2. Entropy Trends**
+- Measures uncertainty reduction over time.
+- Lower final entropy indicates improved certainty.
 
-- **Game Theory Aspects (MDP & Probabilities):**  
-  The MDP framework treats Minesweeper as a game of incomplete information. Each decision (reveal/flag) is made under uncertainty. Bayesian inference provides probabilities of mines to guide these decisions. This combination reflects fundamental game-theoretic principles:
-  - **Strategic Decision-Making:** Choosing actions that maximize expected utility (winning probability).
-  - **Sequential Reasoning:** Each move updates the state of the game and the AI’s knowledge, similar to multi-stage decision-making in game theory.
-  
-- **Dynamic Game Refinement (GR) Theory:**  
-  Traditional GR theory provides a measure of game engagement. Here we enhance it by:
-  - Incorporating time-dependent factors and psychological metrics (acceleration and jerk of safe reveals).
-  - Measuring entropy to represent uncertainty, capturing how learning (via Bayesian updates) affects perceived complexity.
-  
-  These enhancements offer a richer view of the game’s evolving difficulty and the AI’s internal decision tension, providing new insight into how uncertainty and learning shape the gameplay experience.
+### ✅ **3. Complexity Analysis**
+- Tracks complexity trends as the game progresses.
 
-## Future Work
+### ✅ **4. Dynamic GR Metrics**
+- Tracks **GR**, **Acceleration**, and **Jerk** values.
+- Analyzes AI decision tension and engagement.
 
-- **More Advanced Pattern Recognition:**  
-  Incorporate additional known Minesweeper patterns for fewer guesses and improved performance.
+### 📈 **Post-Simulation Analysis:**
+Run the **`analysis.ipynb`** notebook to generate graphs and tables.
 
-- **Deeper MDP and Reinforcement Learning:**  
-  Extend the MDP into a full reinforcement learning framework, possibly with Monte Carlo Tree Search or Q-learning for more robust strategies.
+---
 
-- **Refined Probability Models:**  
-  Explore more sophisticated statistical methods or factor graph approaches for probability inference, improving accuracy when constraints are complex.
+## 🎲 **Game Theory and GR Metrics Explained**
 
-- **Broader Application:**  
-  Apply the methodology to other puzzle/strategy games to test the generality of these approaches.
+### ✅ **Game Theory Aspects:**
+- **Bayesian Inference:** Calculates probabilities of mines in neighboring cells.
+- **MDP Framework:** Optimizes sequential moves for long-term utility.
+
+### ✅ **Dynamic GR Metrics:**
+- Tracks **Game Rigidity (GR)** to measure complexity and engagement.
+- Monitors **Entropy**, **Acceleration**, and **Jerk** as psychological proxies.
+
+These metrics create a richer understanding of the AI’s decision-making process and the evolving game state.
+
+---
+
+## 🤖 **Continuous AI Learning**
+
+### ✅ **How It Works:**
+1. **Experience Storage:** Logs each run in `experience_data.json`.
+2. **Pattern Recognition:** Identifies high-probability moves.
+3. **Entropy Reduction:** Updates probabilities for future games.
+4. **Self-Improvement:** Adjusts AI logic after every iteration.
+
+### ✅ **Benefits:**
+- Smarter AI decision-making over time.
+- Reduced reliance on guesswork.
+- Faster convergence towards optimal strategies.
+
+---
+
+## 🔮 **Future Work**
+1. **Incorporate Neighbor Clues:** Better pattern analysis for safer moves.
+2. **Advanced MDP Integration:** Longer planning horizons.
+3. **Monte Carlo Methods:** Better handling of probabilistic edge cases.
+4. **Scaling Grid Size:** Larger grids for deeper testing.
