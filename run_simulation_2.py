@@ -8,7 +8,11 @@ from src.ai.learning_manager import LearningManager
 from src.metrics.dynamic_gr import DynamicGR
 from src.utils.logger import CSVLogger  # Import the CSVLogger
 import os
+import sys
 
+# Redirect all print statements to a log file
+log_filename = "simulation_log.txt"
+sys.stdout = open(log_filename, "w")
 
 def board_state_hash(board):
     """
@@ -100,16 +104,22 @@ def run_ai_game_with_visualization(width=5, height=5, mines=5, max_steps=50, lea
                 fm = forced_moves[0]
                 gm.make_move(fm[1], fm[2], fm[0])
             else:
-                action = guess_safest_cell(board, bayes)
-                if not action:
-                    break
-                act_type, x, y = action
-                gm.make_move(x, y, act_type)
+                mdp = MDP(board, probabilities, depth=3)  # Initialize MDP
+                action = mdp.find_best_action()  # Use MDP to find the best action
+                if action:
+                    act_type, x, y = action
+                    gm.make_move(x, y, act_type)
+                else:
+                    action = guess_safest_cell(board, bayes)
+                    if not action:
+                        break
+                    act_type, x, y = action
+                    gm.make_move(x, y, act_type)
 
         step += 1
 
     outcome = "win" if gm.is_victory() else "lose"
-    print(f"\nGame Over: {outcome}\n")
+    print(f"\nGame Over: {outcome}")
     return gm.is_victory()
 
 
@@ -138,7 +148,7 @@ def run_classic_game_with_visualization(width=5, height=5, mines=5, max_steps=50
         step += 1
 
     outcome = "win" if gm.is_victory() else "lose"
-    print(f"\nGame Over: {outcome}\n")
+    print(f"\nGame Over: {outcome}")
     return gm.is_victory()
 
 
@@ -160,26 +170,44 @@ def guess_safest_cell(board, bayes):
 if __name__ == "__main__":
     from src.ai.learning_manager import LearningManager
 
-    num_games = 10  # Total number of games to simulate
+    num_games = 10  # Total games in a batch (5 classic, 5 AI)
     learning_mgr = LearningManager("experience_data.json")
     game_key = "5x5_5mines"
+    batch_count = 0
 
-    ai_wins = 0
-    classic_wins = 0
+    while True:
+        batch_count += 1
+        # Simulate 5 classic games
+        classic_wins = 0
+        print(f"\n--- Starting Classic Games ---")
+        for i in range(num_games):
+            print(f"\n--- Classic Game {i + 1} ---")
+            if run_classic_game_with_visualization(5, 5, 5, 50):
+                classic_wins += 1
 
-    print("\n--- Starting Classic Games ---")
-    for i in range(num_games // 2):
-        print(f"\n--- Classic Game {i + 1} ---\n")
-        result = run_classic_game_with_visualization(5, 5, 5, 50)
-        if result:
-            classic_wins += 1
+        classic_win_rate = classic_wins / num_games
+        print(f"\nClassic Win Rate: {classic_win_rate:.2%}")
 
-    print("\n--- Starting AI Games ---")
-    for i in range(num_games // 2):
-        print(f"\n--- AI Game {i + 1} ---\n")
-        result = run_ai_game_with_visualization(5, 5, 5, 50, learning_mgr, game_key, game_id=i + 1)
-        if result:
-            ai_wins += 1
+        # Simulate 5 AI games
+        ai_wins = 0
+        print(f"\n--- Starting AI Games ---")
+        for i in range(num_games):
+            print(f"\n--- AI Game {i + 1} ---")
+            if run_ai_game_with_visualization(5, 5, 5, 50, learning_mgr, game_key, game_id=i + 1):
+                ai_wins += 1
 
-    print(f"\nClassic Wins: {classic_wins}/{num_games // 2}")
-    print(f"AI Wins: {ai_wins}/{num_games // 2}")
+        ai_win_rate = ai_wins / num_games
+        print(f"\nAI Win Rate: {ai_win_rate:.2%}")
+
+        # Check AI win rate threshold
+        if ai_win_rate >= 0.8:
+            print("\nAI Win Rate threshold of 50% achieved! Stopping simulation.")
+            print(f"\nClassic Wins: {classic_wins}/{num_games}")
+            print(f"AI Wins: {ai_wins}/{num_games}")
+            print(f"\nAI Win Rate threshold of 50% achieved in Batch {batch_count}! Stopping simulation.")
+
+            break
+
+# Revert stdout to default (console)
+sys.stdout.close()
+sys.stdout = sys.__stdout__
