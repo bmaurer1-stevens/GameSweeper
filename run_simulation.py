@@ -6,20 +6,32 @@ from src.ai.pattern_solver import PatternSolver
 from src.metrics.dynamic_gr import DynamicGR
 import random
 
-def run_classic_game(width=9, height=9, mines=10, max_steps=200):
+def run_classic_game(width=5, height=5, mines=5, max_steps=50):
+    """A simple 'classic' (human-like) random approach on a 5x5 board with 5 mines."""
     board = Board(width, height, mines)
     gm = GameManager(board)
     step = 0
+
     while not gm.is_over() and step < max_steps:
         unrevealed = board.get_unrevealed_cells()
         if not unrevealed:
             break
+
+        # Pick a random cell to reveal
         cell = random.choice(unrevealed)
         gm.make_move(cell.x, cell.y, "reveal")
+
+        # Print board after the move
+        print(f"\n[Classic] After step {step}:")
+        print(board)
+        print("-------------------------------------")
+        
         step += 1
+
     return gm.is_victory()
 
-def run_ai_game(width=9, height=9, mines=10, max_steps=200):
+def run_ai_game(width=5, height=5, mines=5, max_steps=50):
+    """An AI-based approach (Bayesian + MDP + pattern solver) on a 5x5 board with 5 mines."""
     board = Board(width, height, mines)
     gm = GameManager(board)
     bayes = BayesianAnalyzer()
@@ -27,64 +39,80 @@ def run_ai_game(width=9, height=9, mines=10, max_steps=200):
     pattern_solver = PatternSolver()
     step = 0
 
-    # Initial safe move
-    gm.make_move(width//2, height//2, "reveal")
+    # Make an initial reveal in the center if desired
+    start_x, start_y = width // 2, height // 2
+    gm.make_move(start_x, start_y, "reveal")
+    print("\n[AI] Initial Board after first reveal:")
+    print(board)
+    print("-------------------------------------")
 
     while not gm.is_over() and step < max_steps:
         forced_moves = pattern_solver.find_forced_moves(board)
+
         if forced_moves:
+            # Make all forced moves
             for move in forced_moves:
                 act_type, x, y = move
                 gm.make_move(x, y, act_type)
+
+                # Print board state
+                print(f"\n[AI] After forced move {step}: {move}")
+                print(board)
+                print("-------------------------------------")
+
                 if gm.is_over():
                     break
         else:
+            # Use Bayesian + MDP to choose the best action
             probabilities = bayes.compute_probabilities(board)
             mdp = MDP(board, probabilities, depth=3)
             action = mdp.find_best_action()
+
             if action is None:
+                # No meaningful action found
                 break
+
             act_type, x, y = action
             gm.make_move(x, y, act_type)
+
+            # Print board state
+            print(f"\n[AI] After step {step}: {action}")
+            print(board)
+            print("-------------------------------------")
+
         step += 1
 
     return gm.is_victory()
 
 if __name__ == "__main__":
-    num_games = 20
-    print("Starting simulation...")
-    print(f"Running {num_games} classic approach games and {num_games} AI approach games.")
+    num_games = 2  # Run fewer games for demonstration
+    print("Starting simulation on a 5x5 board with 5 mines...")
+    print(f"Running {num_games} classic approach games and {num_games} AI approach games.\n")
 
     classic_wins = 0
     ai_wins = 0
 
     # Run classic games
     for i in range(num_games):
-        print(f"Running classic game {i+1}/{num_games}...", end='')
+        print(f"=== Classic Game {i+1}/{num_games} ===")
         result = run_classic_game()
         if result:
             classic_wins += 1
-            print(" Won")
+            print(f"\nClassic Game {i+1} Result: Win")
         else:
-            print(" Lost")
-        
-        # Print intermediate results
-        if (i+1) % 5 == 0:
-            print(f"Classic approach intermediate results: {classic_wins}/{i+1} = {(classic_wins/(i+1))*100:.2f}%")
+            print(f"\nClassic Game {i+1} Result: Lose")
+        print("=====================================\n")
 
     # Run AI games
     for i in range(num_games):
-        print(f"Running AI game {i+1}/{num_games}...", end='')
+        print(f"=== AI Game {i+1}/{num_games} ===")
         result = run_ai_game()
         if result:
             ai_wins += 1
-            print(" Won")
+            print(f"\nAI Game {i+1} Result: Win")
         else:
-            print(" Lost")
-        
-        # Print intermediate results
-        if (i+1) % 5 == 0:
-            print(f"AI approach intermediate results: {ai_wins}/{i+1} = {(ai_wins/(i+1))*100:.2f}%")
+            print(f"\nAI Game {i+1} Result: Lose")
+        print("=====================================\n")
 
     # Final results
     print("All simulations completed.")
