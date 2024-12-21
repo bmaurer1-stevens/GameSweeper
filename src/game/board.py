@@ -1,8 +1,9 @@
+# src/game/board.py
 import random
 from .cell import Cell
 
 class Board:
-    def __init__(self, width=9, height=9, mines=10):
+    def __init__(self, width=5, height=5, mines=5):
         self.width = width
         self.height = height
         self.mines = mines
@@ -11,24 +12,20 @@ class Board:
         self._initialize_board()
 
     def _initialize_board(self):
-        # Place mines
         cells = [Cell(x, y) for y in range(self.height) for x in range(self.width)]
         mine_positions = random.sample(cells, self.mines)
-        for cell in mine_positions:
-            cell.has_mine = True
+        for c in mine_positions:
+            c.has_mine = True
 
-        # Convert list back to 2D grid
         self.grid = [cells[i*self.width:(i+1)*self.width] for i in range(self.height)]
-
         # Calculate neighbor mine counts
-        for y in range(self.height):
-            for x in range(self.width):
-                if not self.grid[y][x].has_mine:
-                    self.grid[y][x].neighbor_mines = self.count_neighbor_mines(x, y)
+        for row in self.grid:
+            for c in row:
+                if not c.has_mine:
+                    c.neighbor_mines = self.count_neighbor_mines(c.x, c.y)
 
     def count_neighbor_mines(self, x, y):
-        neighbors = self.get_neighbors(x, y)
-        return sum(1 for c in neighbors if c.has_mine)
+        return sum(1 for n in self.get_neighbors(x, y) if n.has_mine)
 
     def get_neighbors(self, x, y):
         neighbors = []
@@ -41,16 +38,14 @@ class Board:
 
     def reveal_cell(self, x, y):
         cell = self.grid[y][x]
-        if cell.revealed or cell.flagged:
+        if cell.flagged or cell.revealed:
             return
-
         cell.revealed = True
         if cell.has_mine:
             self.game_over = True
             return
-
-        # If no neighboring mines, reveal neighbors recursively
         if cell.neighbor_mines == 0:
+            # Flood fill for zero neighbors
             for n in self.get_neighbors(x, y):
                 if not n.revealed and not n.flagged:
                     self.reveal_cell(n.x, n.y)
@@ -61,24 +56,17 @@ class Board:
             cell.flagged = not cell.flagged
 
     def is_victory(self):
-        # Victory if all non-mine cells are revealed
-        for y in range(self.height):
-            for x in range(self.width):
-                c = self.grid[y][x]
+        # All non-mine cells must be revealed
+        for row in self.grid:
+            for c in row:
                 if not c.has_mine and not c.revealed:
                     return False
         return True
 
     def get_unrevealed_cells(self):
-        result = []
-        for y in range(self.height):
-            for x in range(self.width):
-                if not self.grid[y][x].revealed and not self.grid[y][x].flagged:
-                    result.append(self.grid[y][x])
-        return result
+        return [c for row in self.grid for c in row if not c.revealed and not c.flagged]
 
     def __str__(self):
-        # Text-based representation for debugging
         rows = []
         for row in self.grid:
             rows.append(' '.join(str(c) for c in row))

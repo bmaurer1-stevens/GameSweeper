@@ -1,83 +1,58 @@
-import copy
+# src/ai/mdp.py
+import math
 
 class MDP:
     def __init__(self, board, probabilities, depth=2):
-        self.initial_board = board
+        self.board = board
         self.probabilities = probabilities
         self.depth = depth
 
-    def get_state(self, board):
-        # Encode state as a tuple of revealed/flagged info
-        state_repr = []
-        for y in range(board.height):
-            for x in range(board.width):
-                c = board.grid[y][x]
-                state_repr.append((c.revealed, c.flagged))
-        return tuple(state_repr)
+    def find_best_action(self):
+        # 1. Build a list of possible actions
+        # 2. Evaluate expected reward
+        # 3. Pick the best
+        actions = self._list_actions()
+        if not actions:
+            return None
 
-    def available_actions(self, board):
+        best_action = None
+        best_value = -9999
+
+        for act in actions:
+            exp_value = self._expected_value_of_action(act)
+            if exp_value > best_value:
+                best_value = exp_value
+                best_action = act
+
+        return best_action
+
+    def _list_actions(self):
+        # For each unrevealed cell, we can either reveal or flag
+        # But typically we prefer reveal if probabilities < 1
+        # We'll let forced moves handle near-100% mines. 
+        # Here, we just consider reveals for cells with < 1 probability
+        # and flags for cells with probability > 0.99, for instance.
+        unrevealed = [(c.x, c.y) for row in self.board.grid for c in row if not c.revealed and not c.flagged]
         actions = []
-        for c in board.get_unrevealed_cells():
-            actions.append(("reveal", c.x, c.y))
-            actions.append(("flag", c.x, c.y))
+        for x,y in unrevealed:
+            p = self.probabilities.get((x, y), 0.5)
+            if p < 0.99:
+                actions.append(("reveal", x, y))
+            else:
+                actions.append(("flag", x, y))
         return actions
 
-    def simulate_action(self, board, action):
-        # Return a copy of the board after the action is applied
-        new_board = copy.deepcopy(board)
-        act_type, x, y = action
-        if act_type == "reveal":
-            new_board.reveal_cell(x, y)
-        elif act_type == "flag":
-            new_board.flag_cell(x, y)
-        return new_board
-
-    def action_reward(self, board, action):
-        # For reveal: Reward = expected value: (1 - p_mine)*1 + p_mine*(-10)
-        # For flag: Reward = small neutral (0) since it's strategic not immediate.
+    def _expected_value_of_action(self, action):
+        # simple approach:
+        # "reveal": reward = (1 - pMine)*[1 + info_gain_bonus] + pMine*(-10)
+        # "flag": reward = 0. (or slight negative if you want to discourage pointless flags)
         act_type, x, y = action
         p_mine = self.probabilities.get((x, y), 0.5)
         if act_type == "reveal":
-            return (1 - p_mine)*1 + p_mine*(-10)
-        elif act_type == "flag":
-            # Flagging does not immediately yield success, but prevents revealing a mine by mistake later --> Give a small neutral reward.
+            # approximate info gain bonus: if p_mine < 0.5, assume revealing yields decent new clues
+            info_gain = 0.2 if p_mine < 0.5 else 0.0
+            return (1 - p_mine)*(1 + info_gain) + p_mine*(-10)
+        else:  # flag
+            # If we strongly believe it's a mine, we get a small reward for correct flag
+            # but let's keep it neutral for now.
             return 0.0
-
-    def expectimax(self, board, depth):
-        if depth == 0 or board.game_over or board.is_victory():
-            # Terminal state or depth limit
-            return 0.0, None
-
-        actions = self.available_actions(board)
-        if not actions:
-            return 0.0, None
-
-        best_value = -float('inf')
-        best_action = None
-
-        for action in actions:
-            # Simulate action deterministically (flag action is deterministic)
-            if action[0] == "flag":
-                new_board = self.simulate_action(board, action)
-                value, _ = self.expectimax(new_board, depth-1)
-                # Immediate reward + future value
-                total_value = self.action_reward(board, action) + value
-                if total_value > best_value:
-                    best_value = total_value
-                    best_action = action
-            else:
-                # "reveal" is stochastic from the perspective of hitting a mine or not, but it is already included the expected reward in action_reward.
-                # Since action_reward is already an expectation, it can be treated as deterministic here.
-                new_board = self.simulate_action(board, action)
-                # If a mine is hit, game_over will be True --> accounted for this the reward.
-                value, _ = self.expectimax(new_board, depth-1)
-                total_value = self.action_reward(board, action) + value
-                if total_value > best_value:
-                    best_value = total_value
-                    best_action = action
-
-        return best_value, best_action
-
-    def find_best_action(self):
-        _, action = self.expectimax(self.initial_board, self.depth)
-        return action

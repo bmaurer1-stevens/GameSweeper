@@ -1,3 +1,4 @@
+# src/game/cell.py
 class Cell:
     def __init__(self, x, y, has_mine=False):
         self.x = x
@@ -5,7 +6,7 @@ class Cell:
         self.has_mine = has_mine
         self.revealed = False
         self.flagged = False
-        self.neighbor_mines = 0
+        self.neighbor_mines = 0  # clue for revealed cells
 
     def __repr__(self):
         if self.flagged:
