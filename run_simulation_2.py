@@ -1,4 +1,5 @@
 import random
+import pandas as pd
 from src.game.board import Board
 from src.game.game_manager import GameManager
 from src.ai.bayesian import BayesianAnalyzer
@@ -174,15 +175,17 @@ if __name__ == "__main__":
     learning_mgr = LearningManager("experience_data.json")
     game_key = "5x5_5mines"
     batch_count = 0
-
-    while True:
+    threshold = 0.9
+    max_batches = 10
+    max_ai_win_rate = 0.0
+    while batch_count < max_batches:
         batch_count += 1
         # Simulate 5 classic games
         classic_wins = 0
         print(f"\n--- Starting Classic Games ---")
         for i in range(num_games):
             print(f"\n--- Classic Game {i + 1} ---")
-            if run_classic_game_with_visualization(5, 5, 5, 50):
+            if run_classic_game_with_visualization(9, 9, 20, 200):
                 classic_wins += 1
 
         classic_win_rate = classic_wins / num_games
@@ -193,20 +196,35 @@ if __name__ == "__main__":
         print(f"\n--- Starting AI Games ---")
         for i in range(num_games):
             print(f"\n--- AI Game {i + 1} ---")
-            if run_ai_game_with_visualization(5, 5, 5, 50, learning_mgr, game_key, game_id=i + 1):
+            if run_ai_game_with_visualization(9, 9, 20, 200, learning_mgr, game_key, game_id=i + 1):
                 ai_wins += 1
 
         ai_win_rate = ai_wins / num_games
+        max_ai_win_rate = max(max_ai_win_rate, ai_win_rate)
         print(f"\nAI Win Rate: {ai_win_rate:.2%}")
 
+        # Update maximum win rate and save GR metrics
+        if ai_win_rate > max_ai_win_rate:
+            max_ai_win_rate = ai_win_rate
+            best_batch_id = batch_count
+
+            # Consolidate GR metrics for this batch
+            gr_files = [f"gr_metrics_game_{batch_count * num_games + i + 1}.csv" for i in range(num_games)]
+            gr_data = pd.concat([pd.read_csv(file) for file in gr_files])
+            gr_data.to_csv("gr_metrics_max_batch.csv", index=False)
+
         # Check AI win rate threshold
-        if ai_win_rate >= 0.8:
+        if ai_win_rate >= threshold:
             print("\nAI Win Rate threshold of 50% achieved! Stopping simulation.")
             print(f"\nClassic Wins: {classic_wins}/{num_games}")
             print(f"AI Wins: {ai_wins}/{num_games}")
-            print(f"\nAI Win Rate threshold of 50% achieved in Batch {batch_count}! Stopping simulation.")
+            print(f"\nAI Win Rate threshold of {threshold*100}% achieved in Batch {batch_count}! Stopping simulation.")
 
             break
+    print(f"\nMaximum AI Win Rate Achieved: {max_ai_win_rate:.2%}")
+    if batch_count == max_batches:
+        print(f"\nReached maximum batch limit {max_batches} without consistently achieving : {threshold*100}% AI Win Rate.")
+
 
 # Revert stdout to default (console)
 sys.stdout.close()
